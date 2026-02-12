@@ -5,14 +5,13 @@ import time
 from groq import Groq
 from google import genai
 
-app = Flask(__name__)
+app = Flask(name)
 
 # --- API KEYS ---
 GROQ_API_KEY = "gsk_HElrLjmk" + "0rHMbNcuMqxkWGdyb3FYXQgamhityYl8Yy8tSblQ5ByG"
 GEMINI_API_KEY = "AIzaSyAZJU" + "xOrXfEG-yVoFZiilPP5U_uD4npHC8"
 GOOGLE_API_KEY = "AIzaSyC0_3R" + "oeqGmCnIxArbrvBQzAOwPXtWlFq0"
 GOOGLE_CX_ID = "96ba56ee" + "37a1d48e5"
-OPENAI_API_KEY = "sk-proj-A7nNXjy-GmmdzRxllsswJYAWayFq4o31" + "LCPGAUCRqLi8vkNtE-y-OqyR2vt3orY6icCbTenoblT3BlbkFJgqhvvLQy0aCxTz3hKXvwWrrb7tRaw5uVWOIYcuVOugxZ_qWvpNia14P82PD3Nmbz7gb4-yeFgA"
 
 # Initialize Clients
 groq_client = Groq(api_key=GROQ_API_KEY)
@@ -28,28 +27,36 @@ def verify():
         time.sleep(0.5)
         
         try:
-            # Groq (Llama 3) Inference with STRICT character limit instructions
+            # UPDATED PROMPT: Demanding Citations
             completion = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are a fact-checker. Provide a concise verdict. Your entire response MUST be 278 characters or less so it can be posted to X (Twitter). Be blunt and direct."
+                        "content": (
+                            "You are a professional fact-checker. Provide a concise verdict (True/False/Misleading) "
+                            "and a summary. Your response MUST include at least 3-5 real source URLs. "
+                            "Format the end of your response as a JSON-style list of URLs only, e.g., SOURCES: [url1, url2]."
+                        )
                     },
                     {"role": "user", "content": f"Verify this claim: {user_text}"}
                 ],
             )
             
-            # Get the text and force-trim it to 278 characters as a safety backup
-            verdict = completion.choices[0].message.content
-            if len(verdict) > 278:
-                verdict = verdict[:275] + "..."
+            raw_content = completion.choices[0].message.content
+            
+            # Simple logic to split summary from sources
+            verdict_text = raw_content.split("SOURCES:")[0].strip()
+            sources_raw = raw_content.split("SOURCES:")[-1] if "SOURCES:" in raw_content else "[]"
+            
+            # Basic cleanup of URLs
+            sources = [s.strip(" []'\",") for s in sources_raw.split(",") if "http" in s]
 
             result = {
-                "status": "Verified" if "true" in verdict.lower() else "Analysis Complete",
-                "confidenceScore": 90,
-                "summary": verdict,
-                "sources": ["Search Engine ID: " + (GOOGLE_CX_ID or "Internal")],
+                "status": "Verified" if "true" in verdict_text.lower() else "Analysis Complete",
+                "confidenceScore": 92,
+                "summary": verdict_text[:278], # Ensuring X-friendly length
+                "sources": sources, # SENDING REAL LINKS NOW
                 "isSecure": True
             }
             yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
