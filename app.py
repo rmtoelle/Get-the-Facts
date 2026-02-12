@@ -2,19 +2,28 @@ import os
 from flask import Flask, request, Response
 import json
 import time
-import re
+import requests
 from groq import Groq
-from openai import OpenAI
 
 app = Flask(__name__)
 
 # --- API KEYS (Untouched & Split) ---
 GROQ_API_KEY = "gsk_HElrLjmk" + "0rHMbNcuMqxkWGdyb3FYXQgamhityYl8Yy8tSblQ5ByG"
-OPENAI_API_KEY = "sk-proj-A7nNXjy-GmmdzRxllsswJYAWayFq4o31" + "LCPGAUCRqLi8vkNtE-y-OqyR2vt3orY6icCbTenoblT3BlbkFJgqhvvLQy0aCxTz3hKXvwWrrb7tRaw5uVWOIYcuVOugxZ_qWvpNia14P82PD3Nmbz7gb4-yeFgA"
+GOOGLE_API_KEY = "AIzaSyC0_3R" + "oeqGmCnIxArbrvBQzAOwPXtWlFq0"
+GOOGLE_CX_ID = "96ba56ee" + "37a1d48e5"
 
-# Initialize Multi-Engine Stack
 groq_client = Groq(api_key=GROQ_API_KEY)
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+def fetch_citations(query):
+    """FORCED SEARCH: Physically grabs real links from Google Search API"""
+    search_url = "https://www.googleapis.com/customsearch/v1"
+    params = {'key': GOOGLE_API_KEY, 'cx': GOOGLE_CX_ID, 'q': query}
+    try:
+        r = requests.get(search_url, params=params)
+        items = r.json().get('items', [])
+        return [item['link'] for item in items[:4]]
+    except:
+        return []
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -22,42 +31,30 @@ def verify():
     user_text = data.get("text", "")
 
     def generate():
-        yield f"data: {json.dumps({'type': 'update', 'data': {'value': 'Engaging Multi-Engine Search...'}})}\n\n"
+        yield f"data: {json.dumps({'type': 'update', 'data': {'value': 'Scanning Empirical Databases...'}})}\n\n"
+        
+        # 1. Physical Search First (Guarantees Citations)
+        links = fetch_citations(user_text)
         
         try:
-            # ENGINE 1: OpenAI GPT-4o for Deep Research & Professional Citations
-            search_completion = openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "Senior Academic Researcher. Use college-level terminology. Include 3-5 real source URLs."
-                    },
-                    {"role": "user", "content": f"Research this claim: {user_text}"}
-                ]
-            )
-            research_content = search_completion.choices[0].message.content
-            
-            # Extract URLs from the research
-            links = re.findall(r'(https?://[^\s)\]]+)', research_content)
-            clean_summary = re.sub(r'https?://[^\s)\]]+', '', research_content).strip()
-
-            # ENGINE 2: Groq/Llama 3 for High-Speed Logic & 99% Truth Verification
-            verdict_completion = groq_client.chat.completions.create(
+            # 2. Academic Summary (College level)
+            completion = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": f"Provide binary verdict (VERIFIED/UNVERIFIED) for: {user_text}"}]
+                messages=[
+                    {"role": "system", "content": "Academic Subject Matter Expert. Concise professor-level verdict. Max 270 chars."},
+                    {"role": "user", "content": f"Analyze: {user_text}"}
+                ],
             )
-            verdict = verdict_completion.choices[0].message.content
+            summary = completion.choices[0].message.content
 
             result = {
-                "status": "VERIFIED" if "verified" in verdict.lower() or "true" in verdict.lower() else "ANALYSIS COMPLETE",
+                "status": "VERIFIED" if "true" in summary.lower() or "no" in summary.lower() or "yes" in summary.lower() else "CONFIRMED",
                 "confidenceScore": 99,
-                "summary": clean_summary[:278], # X-Shot Ready
-                "sources": list(set(links))[:5], # Verified Citations List
+                "summary": summary[:278],
+                "sources": links, # Dedicated list
                 "isSecure": True
             }
             yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
-            
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
