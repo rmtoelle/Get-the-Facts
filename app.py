@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# --- API KEYS (Build 40 Restored) ---
+# --- API KEYS ---
 GROQ_API_KEY = "gsk_HElrLjmk" + "0rHMbNcuMqxkWGdyb3FYXQgamhityYl8Yy8tSblQ5ByG"
 GOOGLE_API_KEY = "AIzaSyC0_3R" + "oeqGmCnIxArbrvBQzAOwPXtWlFq0"
 GOOGLE_CX_ID = "96ba56ee" + "37a1d48e5"
@@ -16,7 +16,7 @@ GOOGLE_CX_ID = "96ba56ee" + "37a1d48e5"
 groq_client = Groq(api_key=GROQ_API_KEY)
 genai.configure(api_key=GOOGLE_API_KEY)
 
-def fetch_multi_source_evidence(query):
+def fetch_web_evidence(query):
     """
     Build 40: Fetches citations from Google Search Engine 
     to be cross-referenced by the AI models.
@@ -26,7 +26,7 @@ def fetch_multi_source_evidence(query):
         'key': GOOGLE_API_KEY, 
         'cx': GOOGLE_CX_ID, 
         'q': query, 
-        'num': 6 # Increased for better cross-referencing
+        'num': 6 
     }
     try:
         r = requests.get(search_url, params=params, timeout=5)
@@ -45,39 +45,38 @@ def verify():
         yield f"data: {json.dumps({'type': 'update', 'data': {'value': 'CROSS-REFERENCING ALL LLMS...'}})}\n\n"
         
         # 1. Gather Web Evidence
-        citations = fetch_multi_source_evidence(user_text)
+        citations = fetch_web_evidence(user_text)
         
         try:
-            # 2. Parallel Synthesis (Meta Llama 3 + Grok Logic via Groq)
-            # We use the 70B model for high-accuracy academic consensus
+            # 2. Main Analysis (Meta/Llama 3 70B Engine)
             completion = groq_client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are a Cross-Platform Fact-Checking Engine. Analyze queries against web evidence. Provide a detailed, professor-level verdict. Max 450 characters."
+                        "content": "You are a Professional Academic Fact-Checker. Analyze the query against provided web evidence. Provide a detailed, authoritative analysis. Max 450 characters."
                     },
                     {"role": "user", "content": f"Query: {user_text}\nEvidence: {citations}"}
                 ]
             )
             full_summary = completion.choices[0].message.content
 
-            # 3. X-SHOT Generation (Optimized for Viral Sharing)
+            # 3. X-SHOT Engine: Restored for high-impact sharing
             x_completion = groq_client.chat.completions.create(
                 model="llama3-8b-8192",
                 messages=[
-                    {"role": "system", "content": "Create a punchy, 100-character verdict for a screenshot."},
-                    {"role": "user", "content": f"Summarize this verdict: {full_summary}"}
+                    {"role": "system", "content": "Generate a short, viral-style truth verdict for a screenshot. Max 100 chars."},
+                    {"role": "user", "content": f"Verdict for: {full_summary}"}
                 ]
             )
             x_shot_text = x_completion.choices[0].message.content
 
-            # 4. Final Payload Handshake
+            # 4. Final Payload Handshake (Build 40 Structure)
             result_payload = {
                 "status": "CROSS-VERIFIED",
                 "confidenceScore": 99,
                 "summary": full_summary,
-                "x_summary": x_shot_text,
+                "x_summary": x_shot_text, # RESTORED
                 "sources": citations,
                 "isSecure": True
             }
