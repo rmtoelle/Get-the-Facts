@@ -4,5 +4,6 @@ groq
 openai
 google-generativeai
 anthropic
-duckduckgo-search
+duckduckgo_search
 requests
+gunicorn
