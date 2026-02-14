@@ -1,5 +1,8 @@
 flask
-requests
+flask-cors
 groq
+openai
 google-generativeai
-gunicorn
+anthropic
+duckduckgo-search
+requests
