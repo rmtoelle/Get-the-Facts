@@ -7,3 +7,5 @@ anthropic
 duckduckgo_search
 requests
 gunicorn
+wolframalpha
+
