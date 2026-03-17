@@ -2,10 +2,10 @@ flask
 flask-cors
 groq
 openai
-google-genai
 anthropic
-duckduckgo_search
-requests
-gunicorn
+google-genai
+duckduckgo-search
 wolframalpha
+requests
+
 
