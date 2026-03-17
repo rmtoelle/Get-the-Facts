@@ -7,5 +7,5 @@ google-genai
 duckduckgo-search
 wolframalpha
 requests
-
+gunicorn
 
